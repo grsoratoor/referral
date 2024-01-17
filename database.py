@@ -77,7 +77,7 @@ class User(TableDeclarativeBase):
         if self.username is not None:
             return f"@{self.username}"
         else:
-            return f"[{self.first_name}](tg://user?id={self.user_id})"
+            return f'<a href="tg://user?id={self.user_id}">{self.first_name}</a>'
 
     @property
     def full_name(self):

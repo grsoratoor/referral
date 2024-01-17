@@ -354,7 +354,8 @@ async def leader_board(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"<b>{loc.get(f'lb_menu_{query.data}')}</b>\n\n"
     for i, referral in enumerate(top_referrals):
         user = cache.get_user(referral[0])
-        text += f"<code>{i + 1}. {user.full_name:<15} - {referral.referral_count:2}</code>\n"
+        if user:
+            text += f"<code>{i + 1}. {user.full_name:<15} - {referral.referral_count:2}</code>\n"
 
     await query.answer()
     await query.message.reply_text(text=text, reply_markup=leaderboard_rm, parse_mode='HTML')
@@ -560,7 +561,8 @@ async def chat_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
                                                  reply_markup=user_menu_rm,
                                                  parse_mode='HTML')
         await context.bot.send_message(chat_id=user_cfg['Telegram']['group_id'],
-                                       text=f"{user.mention()} was referred by {user.referred_by.mention()}")
+                                       text=f"{user.mention()} was referred by {user.referred_by.mention()}",
+                                       parse_mode='HTML')
         try:
             await context.bot.delete_message(user.user_id, message.message_id - 1)
         except:
