@@ -1,0 +1,73 @@
+# configuration file
+
+# Language parameters
+[Language]
+# Available languages:
+# it - Italian,
+# en - English,
+# uk - Ukrainian,
+# ru - Russian,
+# zh_cn - Simplified Chinese
+# he - Hebrew,
+# es_mx - Spanish (Mexican)
+# pt_br - Brasilian
+# The lanugages that messages can be displayed in
+enabled_languages = ["it", "en", "uk", "ru", "zh_cn", "he", "es_mx", "pt_br"]
+# The default language to be set for users whose language cannot be autodetected or whose language is not enabled
+default_language = "en"
+# The language to fallback to if a string is missing in a specific language
+# You should set it to either "it" or "en", other languages may be missing some strings as greed is updated
+fallback_language = "en"
+
+
+# Database parameters
+[Database]
+# The database engine you want to use.
+# Refer to http://docs.sqlalchemy.org/en/latest/core/engines.html for the possible settings.
+# This value is ignored if you're running greed via Docker, or if the DB_ENGINE environment variable is set.
+engine = "sqlite:///database.sqlite"
+
+
+# Telegram bot parameters
+[Telegram]
+# Your bot token goes here. Get one from https://t.me/BotFather!
+token = "6725569508:AAFLMFKUcn1Xa_____________"
+# Group ID to monitor
+group_id = "-45445646_____"
+# ad button redirect
+ads_contact = ""
+
+
+
+# General payment settings
+[Payments]
+# ISO currency code
+currency = "USD"
+# Currency exp parameter. You can find that on https://core.telegram.org/bots/payments/currencies.json.
+# It has a value of 2 in most currencies (EUR, USD, GBP...)
+currency_exp = 2
+# Currency symbol which is show to the client users when displaying prices and transaction values
+# If not defined here, default language specific currency symbol from strings would be used
+currency_symbol = "$"
+# reward per referral
+reward = 0.3
+
+# Bot appearance settings
+[Appearance]
+leader_board_top = 10
+
+
+# Logging settings
+[Logging]
+# The output format for the messages printed to the console
+# See https://docs.python.org/3/library/logging.html#logrecord-attributes for information about the {}-attributes
+format = "{asctime} | {threadName} | {name} | {message}"
+# Logging level: ignore all log entries with a level lower than the specified one
+# Valid options are FATAL, ERROR, WARNING, INFO, and DEBUG
+level = "ERROR"
+
+# Bitcoin payment settings
+[Bitcoin]
+# Blockonomics API key
+api_key = "BLOCKONOMICS_API_KEY"
+secret = "YOUR_SECRET"
