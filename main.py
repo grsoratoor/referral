@@ -10,7 +10,7 @@ import sqlalchemy
 import sqlalchemy.ext.declarative as sed
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
-from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -362,6 +362,23 @@ async def leader_board(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.delete_message()
 
 
+async def leader_board_detail(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    top_users = {
+        'daily': get_top_referrals('daily', 5),
+        'weekly': get_top_referrals('weekly', 5),
+        'top20': get_top_referrals('all', 20)
+    }
+    text = f"{loc.get('text_leaderboard')}\n\n"
+    for key, top in top_users.items():
+        text += f"<b>{loc.get(f'lb_menu_{key}')}</b>\n\n"
+        for i, referral in enumerate(top):
+            user = cache.get_user(referral[0])
+            if user:
+                text += f"<code>{i + 1}. {user.full_name:<15} - {referral.referral_count:>2}</code>\n"
+        text += "\n\n"
+    await update.message.reply_text(text=text, parse_mode='HTML')
+
+
 def admin_only(func):
     @wraps(func)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
@@ -512,7 +529,8 @@ async def verify_sum(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if user_sum == correct_sum:
         cache.update_user(update.effective_user.id, {'verified': True})
         await update.message.reply_text("Congratulations! You've verified the sum correctly.\n"
-                                        "Press /start to start using the bot.")
+                                        "Press /start to start using the bot.",
+                                        reply_markup=ReplyKeyboardRemove())
     else:
         await update.message.reply_text("Oops! The sum is incorrect. Please try again.")
         return await start_verification(update, context)
@@ -614,6 +632,25 @@ def get_top_referrals(period: str, limit: int):
     return top_referrals
 
 
+async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    session = sqlalchemy.orm.sessionmaker(engine)()
+    total_users = session.query(db.User).count()
+    total_referrals = session.query(func.count(db.User.user_id)).filter(db.User.referred_by_id.isnot(None)).scalar()
+    total_rewards = session.query(func.sum(db.User.reward)).scalar()
+    total_claimed = session.query(func.sum(db.User.claimed)).scalar()
+    session.close()
+
+    text = loc.get(
+        "text_bot_stat",
+        total_users=total_users,
+        total_referrals=total_referrals,
+        total_rewards=total_rewards,
+        total_claimed=total_claimed
+    )
+
+    await update.message.reply_text(text, parse_mode='HTML')
+
+
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle all errors within the bot."""
     logger.error(context.error)
@@ -636,16 +673,6 @@ def main() -> None:
     # Create the Application and pass it your bot's token.
     application = Application.builder().token(user_cfg["Telegram"]["token"]).build()
 
-    # application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("admin", admin_help))
-    application.add_handler(CommandHandler("set_reward_amount", set_reward_amount))
-    # application.add_handler(CommandHandler("set_ads_contact_url", set_ads_contact_url))
-    application.add_handler(CommandHandler("set_claimed", admin_set_claimed))
-
-    application.add_handler(ChatJoinRequestHandler(chat_join_request))
-    application.add_error_handler(error_handler)
-    application.add_error_handler(error_handler_callback)
-
     start_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -665,6 +692,18 @@ def main() -> None:
     )
     application.add_handler(start_handler)
     application.add_handler(menu_handler)
+
+    application.add_handler(CommandHandler("leaderboard", leader_board_detail))
+
+    application.add_handler(CommandHandler("admin", admin_help))
+    application.add_handler(CommandHandler("stat", get_stats))
+    application.add_handler(CommandHandler("set_reward_amount", set_reward_amount))
+    # application.add_handler(CommandHandler("set_ads_contact_url", set_ads_contact_url))
+    application.add_handler(CommandHandler("set_claimed", admin_set_claimed))
+
+    application.add_handler(ChatJoinRequestHandler(chat_join_request))
+    application.add_error_handler(error_handler)
+    application.add_error_handler(error_handler_callback)
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)

@@ -104,7 +104,7 @@ menu_edit_admins = "🏵 Edit Managers"
 menu_language = "🇬🇧 Language"
 
 # LeaderBoard Menu: daily
-lb_menu_daily = "🏆 Daily Champions"
+lb_menu_daily = "🏅 Daily Champions"
 
 # LeaderBoard Menu: weekly
 lb_menu_weekly = "🧙‍♂️ Weekly Wizards"
@@ -141,9 +141,18 @@ bot_info = ""
 
 # Text
 text_admin_help = "<b>Admin Commands</b>\n\n" \
+                  "/stat \nGet bot stats\n\n" \
                   "/set_reward_amount 0.3 \nsets reward to 0.3 $\n\n" \
                   "/set_claimed yes \nDownloads csv file having payment details and updates the " \
                   "claimed amount for all users"
+
+text_leaderboard = "<b>🏆 Leader Board 🏆</b>"
+
+text_bot_stat = "<b>Bot Stats</b>\n\n<code>" \
+                "Total Users     : {total_users}\n" \
+                "Total Referrals : {total_referrals}\n" \
+                "Total Reward    : {total_rewards}\n" \
+                "Total Claimed   : {total_claimed}</code>"
 
 # Help: guide
 help_msg = ""
