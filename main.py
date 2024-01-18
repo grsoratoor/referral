@@ -374,7 +374,7 @@ async def leader_board_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
         for i, referral in enumerate(top):
             user = cache.get_user(referral[0])
             if user:
-                text += f"<code>{i + 1}. {user.full_name:<15} - {referral.referral_count:>2}</code>\n"
+                text += f"<code>{i + 1}. {user.full_name[:30]:<15} - {referral.referral_count:>2}</code>\n"
         text += "\n\n"
     await update.message.reply_text(text=text, parse_mode='HTML')
 
@@ -636,6 +636,8 @@ async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session = sqlalchemy.orm.sessionmaker(engine)()
     total_users = session.query(db.User).count()
     total_referrals = session.query(func.count(db.User.user_id)).filter(db.User.referred_by_id.isnot(None)).scalar()
+    total_joined = session.query(func.count(db.User.user_id)).filter(db.User.referred_by_id.isnot(None)).filter(
+        db.User.joined.is_(True)).scalar()
     total_rewards = session.query(func.sum(db.User.reward)).scalar()
     total_claimed = session.query(func.sum(db.User.claimed)).scalar()
     session.close()
@@ -644,8 +646,9 @@ async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "text_bot_stat",
         total_users=total_users,
         total_referrals=total_referrals,
-        total_rewards=total_rewards,
-        total_claimed=total_claimed
+        total_joined=total_joined,
+        total_rewards=round(total_rewards, 2),
+        total_claimed=round(total_claimed, 2)
     )
 
     await update.message.reply_text(text, parse_mode='HTML')

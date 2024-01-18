@@ -151,6 +151,7 @@ text_leaderboard = "<b>🏆 Leader Board 🏆</b>"
 text_bot_stat = "<b>Bot Stats</b>\n\n<code>" \
                 "Total Users     : {total_users}\n" \
                 "Total Referrals : {total_referrals}\n" \
+                "Total Joined    : {total_joined}\n" \
                 "Total Reward    : {total_rewards}\n" \
                 "Total Claimed   : {total_claimed}</code>"
 
