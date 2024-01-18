@@ -354,8 +354,7 @@ async def leader_board(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"<b>{loc.get(f'lb_menu_{query.data}')}</b>\n\n"
     for i, referral in enumerate(top_referrals):
         user = cache.get_user(referral[0])
-        if user:
-            text += f"<code>{i + 1}. {user.full_name:<15} - {referral.referral_count:2}</code>\n"
+        text += f"<code>{i + 1}. {user.full_name:<15} - {referral.referral_count:2}</code>\n"
 
     await query.answer()
     await query.message.reply_text(text=text, reply_markup=leaderboard_rm, parse_mode='HTML')
@@ -373,8 +372,7 @@ async def leader_board_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
         text += f"<b>{loc.get(f'lb_menu_{key}')}</b>\n\n"
         for i, referral in enumerate(top):
             user = cache.get_user(referral[0])
-            if user:
-                text += f"<code>{i + 1}. {user.full_name[:30]:<15} - {referral.referral_count:>2}</code>\n"
+            text += f"<code>{i + 1}. {user.full_name[:30]:<15} - {referral.referral_count:>2}</code>\n"
         text += "\n\n"
     await update.message.reply_text(text=text, parse_mode='HTML')
 
@@ -622,7 +620,7 @@ def get_top_referrals(period: str, limit: int):
     session = sqlalchemy.orm.sessionmaker(engine)()
     top_referrals = (
         session.query(db.User.referred_by_id, func.count(db.User.user_id).label('referral_count'))
-        .filter(db.User.joined == True, db.User.created_at >= start_date)
+        .filter(db.User.joined == True, db.User.created_at >= start_date, db.User.referred_by_id.isnot(None))
         .group_by(db.User.referred_by_id)
         .order_by(func.count(db.User.user_id).desc())
         .limit(limit)
