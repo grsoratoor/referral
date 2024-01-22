@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import datetime
 import logging
@@ -8,6 +9,7 @@ from io import StringIO
 
 import sqlalchemy
 import sqlalchemy.ext.declarative as sed
+import telegram
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
@@ -24,13 +26,10 @@ from telegram.ext import (
 import database as db
 import localization
 import nuconfig
-import utils
+import payments.wallet
 from cache import Cache
-
-try:
-    import coloredlogs
-except ImportError:
-    coloredlogs = None
+from payments.solana import SolanaWallet
+from utils import AdminCommands, Vars, generate_options
 
 # Enable logging
 logging.basicConfig(
@@ -40,7 +39,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Define states for the conversation
-COLLECTING_WALLET, LEADER_BOARD, VERIFY_SUM = range(3)
+COLLECTING_WALLET, LEADER_BOARD, VERIFY_SUM, BROADCAST = range(4)
 
 """Run the bot."""
 # Start logging setup
@@ -128,6 +127,9 @@ class Config:
 
 # create cache class for users
 cache = Cache(engine)
+variables = Vars()
+admin_commands = AdminCommands()
+solana_wallet = SolanaWallet(payments.solana.ENDPOINT)
 
 user_menu_kb = [
     [
@@ -143,6 +145,7 @@ user_menu_kb = [
         InlineKeyboardButton(loc.get("menu_help"), callback_data="6"),
     ],
     [
+        InlineKeyboardButton(loc.get("menu_withdraw"), callback_data="withdraw"),
         InlineKeyboardButton(loc.get('menu_ads'), url=Config.ADS_CONTACT_URL)
     ]
 ]
@@ -312,6 +315,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     elif query.data == 'developer':
         notification = "Getting developer details"
         text = f"Bot developed by @hackspider"
+    elif query.data == 'withdraw':
+        await withdraw(update, context)
+        return
     else:
         return await leader_board(update, context)
 
@@ -377,6 +383,39 @@ async def leader_board_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
     await update.message.reply_text(text=text, parse_mode='HTML')
 
 
+async def withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = cache.get_user(update.effective_user.id)
+    query = update.callback_query
+
+    if not variables.withdraw_enabled:
+        await query.answer(f"Currently withdraw option is disabled.", True)
+        return
+
+    if not solana_wallet.is_valid_address(user.wallet):
+        await query.answer("Your wallet address is not valid.", True)
+        return
+
+    if not user.referrals < variables.min_referral:
+        await query.answer(f"You need to refer at least {variables.min_referral} to eligible for withdraw.", True)
+        return
+
+    if not user.balance < variables.min_reward_amount:
+        await query.answer(f"You need to have at least {variables.min_reward_amount} amount to withdraw.", True)
+        return
+
+    try:
+        tx_url = solana_wallet.send(user.wallet, user.balance)
+        cache.update_user(user.user_id, {"claimed": user.reward})
+        await query.message.reply_text("Rewards sent successfully.")
+        await query.message.reply_text(tx_url)
+    except payments.wallet.PrivateKeyNoneError:
+        await query.answer("Admin has not yet configured the wallet to send rewards.", True)
+    except payments.wallet.InvalidAddressError:
+        await query.answer("Your wallet address is not valid.", True)
+    except payments.wallet.NotEnoughBalanceError:
+        await query.answer("Admin wallet doesnt have enough balance to pay.", True)
+
+
 def admin_only(func):
     @wraps(func)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE, *args, **kwargs):
@@ -394,47 +433,44 @@ def admin_only(func):
 
 @admin_only
 async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(loc.get('text_admin_help'), parse_mode='HTML')
+    text = f"<b>Admin Help Menu</b>\n\n" \
+           f"{admin_commands}\n" \
+           f"<b>Current Configuration</b>\n\n" \
+           f"{variables}"
+    await update.message.reply_text(text, parse_mode='HTML')
 
 
 @admin_only
-async def set_reward_amount(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def admin_set(update: Update, context: ContextTypes.DEFAULT_TYPE):
     input_text = update.message.text.split(' ')
-
     # Check if the input has the correct format
-    if len(input_text) != 2:
-        await update.message.reply_text("Invalid format. Please provide as /set_reward_amount amount")
+    if len(input_text) == 1:
+        command = admin_commands.get(input_text[0])
+        value = None
+        text = "Changes applied."
+    elif len(input_text) == 2:
+        command = admin_commands.get(input_text[0])
+        value = input_text[1]
+        text = f"Changes applied,\nUpdated the value to {value}"
+    else:
+        await update.message.reply_text("Invalid command format\nPress /admin to know more.")
         return
 
-    # Extract the amount from the input
+    if command.type is not None and value is None:
+        await update.message.reply_text("Invalid command format\nCommand needs a value\nPress /admin to know more.")
+        return
+
+    # convert value to its type
     try:
-        new_reward_amount = float(input_text[1])
+        if value:
+            value = command.type(value)
     except ValueError:
-        await update.message.reply_text("Invalid amount. Please provide a valid float amount.")
+        await update.message.reply_text("Invalid value. Please provide a valid value.")
         return
 
-    # Update the config variable
-    Config.REWARD_AMOUNT = new_reward_amount
+    variables.update(command.command, value)
 
-    await update.message.reply_text(f"Reward amount set to {new_reward_amount}")
-
-
-@admin_only
-async def set_ads_contact_url(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    input_text = update.message.text.split(' ')
-
-    # Check if the input has the correct format
-    if len(input_text) != 2:
-        await update.message.reply_text("Invalid format. Please provide as /set_ads_contact_url url")
-        return
-
-    # Extract the URL from the input
-    new_ads_contact_url = input_text[1]
-
-    # Update the config variable
-    Config.ADS_CONTACT_URL = new_ads_contact_url
-
-    await update.message.reply_text(f"Ads contact URL set to {new_ads_contact_url}")
+    await update.message.reply_text(text)
 
 
 # Admin command to set claimed amount equal to reward amount for all users
@@ -483,6 +519,31 @@ async def admin_set_claimed(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Claimed amounts updated for all users.")
 
 
+@admin_only
+async def ask_broadcast_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Please send a message you want to broadcast\n"
+                                    "Press /cancel to cancel.")
+    return BROADCAST
+
+
+@admin_only
+async def send_broadcast_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Broadcast started")
+    session = sqlalchemy.orm.sessionmaker(engine)()
+    users = session.query(db.User).all()
+    for user in users:
+        try:
+            await update.message.copy(chat_id=user.user_id)
+        except telegram.error.BadRequest as e:
+            logger.error(e)
+
+        await asyncio.sleep(0.5)
+
+    session.close()
+
+    await update.message.reply_text("Broadcast completed!")
+
+
 # Function to start the verification process
 async def start_verification(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     # Generate two random values for the sum verification
@@ -496,7 +557,7 @@ async def start_verification(update: Update, context: ContextTypes.DEFAULT_TYPE)
     context.user_data['correct_sum'] = correct_sum
 
     # Generate four options for the user to select
-    options = utils.generate_options(correct_sum)
+    options = generate_options(correct_sum)
 
     # Send a message to the user with the values and answer options
     await update.message.reply_text(
@@ -655,19 +716,12 @@ async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle all errors within the bot."""
     logger.error(context.error)
-    try:
-        await context.bot.send_message(update.message.chat_id, "An error occurred. Please try again later.")
-    except:
-        pass
-
-
-async def error_handler_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle errors that occur within callback queries."""
-    logger.error(context.error)
-    try:
+    if update.message:
+        await update.message.reply_text("An error occurred. Please try again later.")
+    elif update.callback_query:
         await update.callback_query.answer("An error occurred. Please try again later.")
-    except:
-        pass
+    else:
+        print(update)
 
 
 def main() -> None:
@@ -691,20 +745,37 @@ def main() -> None:
         },
         fallbacks=[],
     )
+
+    broadcast_handler = ConversationHandler(
+        entry_points=[CommandHandler('broadcast', ask_broadcast_msg)],
+        states={
+            BROADCAST: [MessageHandler(~filters.COMMAND, send_broadcast_msg),
+                        CommandHandler('cancel', cancel)],
+        },
+        fallbacks=[],
+    )
+
     application.add_handler(start_handler)
     application.add_handler(menu_handler)
+    application.add_handler(broadcast_handler)
 
     application.add_handler(CommandHandler("leaderboard", leader_board_detail))
-
-    application.add_handler(CommandHandler("admin", admin_help))
     application.add_handler(CommandHandler("stat", get_stats))
-    application.add_handler(CommandHandler("set_reward_amount", set_reward_amount))
-    # application.add_handler(CommandHandler("set_ads_contact_url", set_ads_contact_url))
+
+    # Admin commands
+    application.add_handler(CommandHandler("admin", admin_help))
     application.add_handler(CommandHandler("set_claimed", admin_set_claimed))
 
+    # Commands to set variables
+    application.add_handler(CommandHandler(admin_commands.SET_KEY, admin_set))
+    application.add_handler(CommandHandler(admin_commands.SET_REWARD_AMOUNT, admin_set))
+    application.add_handler(CommandHandler(admin_commands.SET_MIN_REWARD, admin_set))
+    application.add_handler(CommandHandler(admin_commands.SET_MIN_REFERRAL, admin_set))
+    application.add_handler(CommandHandler(admin_commands.ENABLE_WITHDRAW, admin_set))
+    application.add_handler(CommandHandler(admin_commands.DISABLE_WITHDRAW, admin_set))
+
     application.add_handler(ChatJoinRequestHandler(chat_join_request))
-    application.add_error_handler(error_handler)
-    application.add_error_handler(error_handler_callback)
+    # application.add_error_handler(error_handler)
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)

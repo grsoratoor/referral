@@ -55,6 +55,8 @@ menu_developer = "👨🏻‍💻 Bot Developed By"
 # User_menu: advertise
 menu_ads = "🗞 Advertise Your Project Here"
 
+menu_withdraw = "💰 Withdraw Reward"
+
 # Admin menu: go to user mode
 menu_user_mode = "👤 Switch to customer mode"
 
