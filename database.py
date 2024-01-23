@@ -1,8 +1,8 @@
 import logging
 from datetime import datetime
 
-from sqlalchemy import Column, ForeignKey, UniqueConstraint
-from sqlalchemy import Integer, BigInteger, String, Text, LargeBinary, DateTime, Boolean, Float
+from sqlalchemy import Column, ForeignKey
+from sqlalchemy import Integer, BigInteger, String, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, backref
 
@@ -77,7 +77,7 @@ class User(TableDeclarativeBase):
         if self.username is not None:
             return f"@{self.username}"
         else:
-            return f'<a href="tg://user?id={self.user_id}">{self.first_name}</a>'
+            return f'<a href="tg://user?id={self.user_id}">{self.full_name}</a>'
 
     @property
     def full_name(self):
@@ -93,7 +93,7 @@ class User(TableDeclarativeBase):
 
     @property
     def balance(self):
-        return self.reward - self.claimed
+        return round(self.reward - self.claimed, 4)
 
     def __repr__(self):
         return f"<User {self.mention()} referred by {self.referred_by_id}>"

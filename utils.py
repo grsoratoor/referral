@@ -69,10 +69,10 @@ class AdminCommands:
 class Vars:
     def __init__(self):
         self.private_key: str = None
-        self.reward_amount: float = None
+        self.reward_amount: float = 0.005
         self.withdraw_enabled: bool = False
-        self.min_referral: int = None
-        self.min_reward_amount: float = None
+        self.min_referral: int = 0
+        self.min_reward_amount: float = 0
 
     def __str__(self):
         text = ""

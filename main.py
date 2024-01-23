@@ -395,19 +395,35 @@ async def withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.answer("Your wallet address is not valid.", True)
         return
 
-    if not user.referrals < variables.min_referral:
+    if user.referrals < variables.min_referral:
         await query.answer(f"You need to refer at least {variables.min_referral} to eligible for withdraw.", True)
         return
 
-    if not user.balance < variables.min_reward_amount:
+    if user.balance < variables.min_reward_amount:
         await query.answer(f"You need to have at least {variables.min_reward_amount} amount to withdraw.", True)
         return
 
+    if user.balance == 0:
+        await query.answer(f"Your balance is 0.", True)
+        return
+
     try:
-        tx_url = solana_wallet.send(user.wallet, user.balance)
+        solana_wallet.set_private_key(variables.private_key)
+        balance = user.balance
+        currency_symbol = user_cfg['Payments']['currency_symbol']
+        tx_url = solana_wallet.send(user.wallet, balance)
         cache.update_user(user.user_id, {"claimed": user.reward})
-        await query.message.reply_text("Rewards sent successfully.")
+        await query.message.reply_text(f"Rewards of <b>{user.balance} {currency_symbol}</b> sent successfully.",
+                                       parse_mode='HTML')
         await query.message.reply_text(tx_url)
+        await context.bot.send_message(chat_id=user_cfg['Telegram']['group_id'],
+                                       text=loc.get('text_withdraw_proof',
+                                                    username=user.mention(),
+                                                    balance=balance,
+                                                    currency_symbol=currency_symbol,
+                                                    tx_url=tx_url),
+                                       parse_mode='HTML',
+                                       )
     except payments.wallet.PrivateKeyNoneError:
         await query.answer("Admin has not yet configured the wallet to send rewards.", True)
     except payments.wallet.InvalidAddressError:
@@ -775,7 +791,7 @@ def main() -> None:
     application.add_handler(CommandHandler(admin_commands.DISABLE_WITHDRAW, admin_set))
 
     application.add_handler(ChatJoinRequestHandler(chat_join_request))
-    # application.add_error_handler(error_handler)
+    application.add_error_handler(error_handler)
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)

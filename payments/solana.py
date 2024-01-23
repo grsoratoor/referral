@@ -1,6 +1,6 @@
 import solathon.utils
-from solathon.core.instructions import transfer
 from solathon import AsyncClient, Client, Transaction, PublicKey, Keypair
+from solathon.core.instructions import transfer
 
 from payments.wallet import Wallet, InvalidAddressError, NotEnoughBalanceError
 
@@ -20,13 +20,24 @@ class SolanaWallet(Wallet):
             return self.address
 
     def is_valid_address(self, address):
+        # version 0.1.7
+        # try:
+        #     account_info = self.client.get_account_info(address)
+        #     if account_info.owner:
+        #         return True
+        #     else:
+        #         return False
+        # except solathon.utils.RPCRequestError:
+        #     return False
         try:
             account_info = self.client.get_account_info(address)
-            if account_info.owner:
-                return True
-            else:
+            if 'error' in account_info:
                 return False
-        except solathon.utils.RPCRequestError:
+            elif account_info['result'].get('value') is None:
+                return False
+            else:
+                return True
+        except Exception as e:
             return False
 
     def send(self, address, amount):
@@ -50,12 +61,13 @@ class SolanaWallet(Wallet):
             transaction = Transaction(instructions=[instruction], signers=[sender])
 
             result = self.client.send_transaction(transaction)
-            tx_url = f"https://solscan.io/tx/{result}"
+            tx_url = f"https://solscan.io/tx/{result['result']}"
             return tx_url
 
     def balance(self) -> int:
         balance = self.client.get_balance(self.public_key)
-        return balance
+        # return balance version 0.1.7
+        return balance['result'].get('value', 0)
 
 
 class SolanaAsyncWallet(Wallet):

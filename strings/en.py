@@ -49,7 +49,7 @@ menu_help = "ℹ️ Help"
 # User_menu: connect
 menu_connect = "💼 Connect"
 
-#User menu: Developer
+# User menu: Developer
 menu_developer = "👨🏻‍💻 Bot Developed By"
 
 # User_menu: advertise
@@ -156,6 +156,9 @@ text_bot_stat = "<b>Bot Stats</b>\n\n<code>" \
                 "Total Joined    : {total_joined}\n" \
                 "Total Reward    : {total_rewards}\n" \
                 "Total Claimed   : {total_claimed}</code>"
+
+text_withdraw_proof = "User {username} withdraw his rewards of <b>{balance} {currency_symbol}</b>\n\n" \
+                      "{tx_url}"
 
 # Help: guide
 help_msg = ""
