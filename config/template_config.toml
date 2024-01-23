@@ -37,20 +37,22 @@ group_id = "-45445646_____"
 # ad button redirect
 ads_contact = ""
 
+help_username = ""
+
 
 
 # General payment settings
 [Payments]
 # ISO currency code
-currency = "USD"
+currency = "SOL"
 # Currency exp parameter. You can find that on https://core.telegram.org/bots/payments/currencies.json.
 # It has a value of 2 in most currencies (EUR, USD, GBP...)
 currency_exp = 2
 # Currency symbol which is show to the client users when displaying prices and transaction values
 # If not defined here, default language specific currency symbol from strings would be used
-currency_symbol = "$"
+currency_symbol = "SOL"
 # reward per referral
-reward = 0.3
+reward = 0.005
 
 # Bot appearance settings
 [Appearance]
