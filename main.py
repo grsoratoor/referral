@@ -307,7 +307,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     elif query.data == '6':
         notification = "Getting help"
-        text = f"Contact @johnywest for any help/issue related to bot"
+        text = f"Contact {user_cfg['Telegram']['help_username']} for any help/issue related to bot"
     elif query.data == 'developer':
         notification = "Getting developer details"
         text = f"Bot developed by @hackspider"
