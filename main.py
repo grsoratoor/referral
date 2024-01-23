@@ -119,12 +119,6 @@ loc = localization.Localization(
     }
 )
 
-
-class Config:
-    REWARD_AMOUNT = user_cfg['Payments']['reward']
-    ADS_CONTACT_URL = user_cfg['Telegram']['ads_contact']
-
-
 # create cache class for users
 cache = Cache(engine)
 variables = Vars()
@@ -146,7 +140,7 @@ user_menu_kb = [
     ],
     [
         InlineKeyboardButton(loc.get("menu_withdraw"), callback_data="withdraw"),
-        InlineKeyboardButton(loc.get('menu_ads'), url=Config.ADS_CONTACT_URL)
+        InlineKeyboardButton(loc.get('menu_ads'), url=user_cfg['Telegram']['ads_contact'])
     ]
 ]
 
@@ -293,7 +287,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         text = f"Total reward : {user.reward} {user_cfg['Payments']['currency_symbol']}\n" \
                f"Claimed reward: {user.claimed} {user_cfg['Payments']['currency_symbol']}\n" \
                f"Balance reward: {user.balance} {user_cfg['Payments']['currency_symbol']}\n\n" \
-               f"<i>You will get {Config.REWARD_AMOUNT} {user_cfg['Payments']['currency_symbol']} " \
+               f"<i>You will get {variables.reward_amount} {user_cfg['Payments']['currency_symbol']} " \
                f"for each referral</i>"
 
     elif query.data == '5':
@@ -450,7 +444,8 @@ def admin_only(func):
 @admin_only
 async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"<b>Admin Help Menu</b>\n\n" \
-           f"{admin_commands}\n" \
+           f"{admin_commands}\n\n" \
+           f"/download - Download all user data\n\n" \
            f"<b>Current Configuration</b>\n\n" \
            f"{variables}"
     await update.message.reply_text(text, parse_mode='HTML')
@@ -491,13 +486,8 @@ async def admin_set(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # Admin command to set claimed amount equal to reward amount for all users
 @admin_only
-async def admin_set_claimed(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
     input_text = update.message.text.split(' ')
-
-    # Check if the input has the correct format
-    if len(input_text) != 2 and input_text[1] != 'yes':
-        await update.message.reply_text("Invalid format. Please provide as /set_claimed yes")
-        return
 
     message = await update.message.reply_text("Generating csv file ...")
 
@@ -516,23 +506,14 @@ async def admin_set_claimed(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     csv_output.seek(0)
 
-    # Update claimed amount for all users
-    for user in users:
-        user.claimed = user.reward
-
-    # Commit changes to the database
-    session.commit()
-
     # delete loading message
     await message.delete()
     # Send the original CSV file to the user as a document
     await update.message.reply_document(
         document=csv_output,
-        filename="user_data_before_update.csv",
-        caption="User data before updating claimed amounts."
+        filename="user_data.csv",
+        caption="User data."
     )
-
-    await update.message.reply_text("Claimed amounts updated for all users.")
 
 
 @admin_only
@@ -644,7 +625,7 @@ async def chat_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user.referred_by:
         session = sqlalchemy.orm.sessionmaker(bind=engine)()
         session.query(db.User).filter_by(user_id=user.referred_by_id).update(
-            {'reward': db.User.reward + Config.REWARD_AMOUNT},
+            {'reward': db.User.reward + variables.reward_amount},
             synchronize_session=False)
         session.commit()
         session.close()
@@ -780,7 +761,7 @@ def main() -> None:
 
     # Admin commands
     application.add_handler(CommandHandler("admin", admin_help))
-    application.add_handler(CommandHandler("set_claimed", admin_set_claimed))
+    application.add_handler(CommandHandler("download", download))
 
     # Commands to set variables
     application.add_handler(CommandHandler(admin_commands.SET_KEY, admin_set))
