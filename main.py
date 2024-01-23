@@ -139,10 +139,12 @@ user_menu_kb = [
         InlineKeyboardButton(loc.get("menu_help"), callback_data="6"),
     ],
     [
-        InlineKeyboardButton(loc.get("menu_withdraw"), callback_data="withdraw"),
-        InlineKeyboardButton(loc.get('menu_ads'), url=user_cfg['Telegram']['ads_contact'])
+        InlineKeyboardButton(loc.get("menu_withdraw"), callback_data="withdraw")
     ]
 ]
+
+if user_cfg['Telegram']['ads_contact']:
+    user_menu_kb.append([InlineKeyboardButton(loc.get('menu_ads'), url=user_cfg['Telegram']['ads_contact'])])
 
 user_menu_rm = InlineKeyboardMarkup(user_menu_kb)
 
@@ -374,7 +376,13 @@ async def leader_board_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
             user = cache.get_user(referral[0])
             text += f"<code>{i + 1}. {user.full_name[:30]:<15} - {referral.referral_count:>2}</code>\n"
         text += "\n\n"
-    await update.message.reply_text(text=text, parse_mode='HTML')
+
+    reply_markup = None
+    if user_cfg['Telegram']['ads_contact']:
+        reply_markup = InlineKeyboardMarkup(
+            [[InlineKeyboardButton(loc.get('menu_ads'), url=user_cfg['Telegram']['ads_contact'])]]
+        )
+    await update.message.reply_text(text=text, reply_markup=reply_markup, parse_mode='HTML')
 
 
 async def withdraw(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -706,8 +714,13 @@ async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         total_rewards=round(total_rewards, 2),
         total_claimed=round(total_claimed, 2)
     )
+    reply_markup = None
+    if user_cfg['Telegram']['ads_contact']:
+        reply_markup = InlineKeyboardMarkup(
+            [[InlineKeyboardButton(loc.get('menu_ads'), url=user_cfg['Telegram']['ads_contact'])]]
+        )
 
-    await update.message.reply_text(text, parse_mode='HTML')
+    await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
 
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
