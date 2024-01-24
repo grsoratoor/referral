@@ -220,7 +220,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     if not user.verified:
         return await start_verification(update, context)
 
-    await update.message.reply_text(loc.get('conversation_after_start'))
+    await update.message.reply_text(loc.get('conversation_after_start'), reply_markup=ReplyKeyboardRemove())
 
     if user.referred_by_id and not user.joined:
         # if user already member, don't ask him to join

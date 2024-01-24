@@ -23,7 +23,7 @@ fi
 
 # Start the process
 echo "Starting new process..."
-nohup python3 main.py --$1 > /dev/null 2>&1 &
+nohup python3 main.py --"$1" > /dev/null 2>&1 &
 echo "New process started."
 
 # Deactivate the virtual environment
