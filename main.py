@@ -13,7 +13,7 @@ import telegram
 from captcha.image import ImageCaptcha
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -565,7 +565,7 @@ async def start_verification(update: Update, context: ContextTypes.DEFAULT_TYPE)
     context.user_data['correct_value'] = correct_value
 
     # Send a message to the user with the values and answer options
-    await update.message.reply_photo(data, "send the number you see in image")
+    await update.message.reply_photo(data, "send the number you see in image", reply_markup=ReplyKeyboardRemove())
 
     # Move to the VERIFY_SUM state
     return VERIFY_SUM

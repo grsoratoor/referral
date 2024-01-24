@@ -14,16 +14,16 @@ else
 fi
 
 # Check if the process is running
-if pgrep -f "main.py" > /dev/null; then
+if pgrep -f "main.py --$1" > /dev/null; then
     echo "Killing existing process..."
-    pkill -f "main.py"
+    pkill -f "main.py --$1"
 else
     echo "No existing process found."
 fi
 
 # Start the process
 echo "Starting new process..."
-nohup python3 main.py > /dev/null 2>&1 &
+nohup python3 main.py --$1 > /dev/null 2>&1 &
 echo "New process started."
 
 # Deactivate the virtual environment
