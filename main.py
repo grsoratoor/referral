@@ -10,9 +10,10 @@ from io import StringIO
 import sqlalchemy
 import sqlalchemy.ext.declarative as sed
 import telegram
+from captcha.image import ImageCaptcha
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
-from telegram import ReplyKeyboardMarkup, Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardRemove
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -29,7 +30,7 @@ import nuconfig
 import payments.wallet
 from cache import Cache
 from payments.solana import SolanaWallet
-from utils import AdminCommands, Vars, generate_options
+from utils import AdminCommands, Vars
 
 # Enable logging
 logging.basicConfig(
@@ -552,51 +553,39 @@ async def send_broadcast_msg(update: Update, context: ContextTypes.DEFAULT_TYPE)
 # Function to start the verification process
 async def start_verification(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     # Generate two random values for the sum verification
-    value_a = random.randint(1, 10)
-    value_b = random.randint(1, 10)
 
-    # Calculate the correct sum
-    correct_sum = value_a + value_b
+    image = ImageCaptcha()
+
+    correct_value = random.randint(1000, 9999)
+    correct_value = str(correct_value)
+
+    data = image.generate(correct_value)
 
     # Save the correct sum in the context
-    context.user_data['correct_sum'] = correct_sum
-
-    # Generate four options for the user to select
-    options = generate_options(correct_sum)
+    context.user_data['correct_value'] = correct_value
 
     # Send a message to the user with the values and answer options
-    await update.message.reply_text(
-        f"Calculate the sum of {value_a} and {value_b}.",
-        reply_markup=ReplyKeyboardMarkup(options, one_time_keyboard=True),
-    )
+    await update.message.reply_photo(data, "send the number you see in image")
 
     # Move to the VERIFY_SUM state
     return VERIFY_SUM
 
 
 # Function to handle user's response to verify the sum
-async def verify_sum(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def verify_captcha(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     # Get the user's response
     user_response = update.message.text
 
-    # Check if the user's response is a valid integer
-    try:
-        user_sum = int(user_response)
-    except ValueError:
-        await update.message.reply_text("Please enter a valid integer as the sum.")
-        return VERIFY_SUM
-
     # Get the correct sum from the context
-    correct_sum = context.user_data['correct_sum']
+    correct_value = context.user_data['correct_value']
 
     # Check if the user's sum matches the correct sum
-    if user_sum == correct_sum:
+    if user_response == correct_value:
         cache.update_user(update.effective_user.id, {'verified': True})
-        await update.message.reply_text("Congratulations! You've verified the sum correctly.\n"
-                                        "Press /start to start using the bot.",
-                                        reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text("Congratulations! You've verified you are human!.\n"
+                                        "Press /start to start using the bot.")
     else:
-        await update.message.reply_text("Oops! The sum is incorrect. Please try again.")
+        await update.message.reply_text("Oops! The value is incorrect. Please try again.")
         return await start_verification(update, context)
 
     # End the conversation
@@ -747,7 +736,7 @@ def main() -> None:
     start_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            VERIFY_SUM: [MessageHandler(filters.TEXT & (~filters.COMMAND), verify_sum)]
+            VERIFY_SUM: [MessageHandler(filters.TEXT & (~filters.COMMAND), verify_captcha)]
         },
         fallbacks=[]
     )
