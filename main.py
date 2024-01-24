@@ -622,7 +622,13 @@ async def help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 async def chat_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle chat join requests"""
     user = cache.get_user(update.chat_join_request.user_chat_id)
-    await update.chat_join_request.approve()
+
+    if not user.verified:
+        await update.chat_join_request.decline()
+        await context.bot.send_message(chat_id=user.user_id, text="You need to verify you are human before joining.")
+        return
+    else:
+        await update.chat_join_request.approve()
 
     # prevent getting duplicate joins
     if user.joined:
