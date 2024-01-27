@@ -126,28 +126,31 @@ variables = Vars()
 admin_commands = AdminCommands()
 solana_wallet = SolanaWallet(payments.solana.ENDPOINT)
 
-user_menu_kb = [
-    [
-        InlineKeyboardButton(loc.get("menu_referral_link"), callback_data="1"),
-        InlineKeyboardButton(loc.get("menu_referral_status"), callback_data="2"),
-    ],
-    [
-        InlineKeyboardButton(loc.get("menu_leaderboard"), callback_data="3"),
-        InlineKeyboardButton(loc.get("menu_rewards"), callback_data="4"),
-    ],
-    [
-        InlineKeyboardButton(loc.get("menu_connect"), callback_data="5"),
-        InlineKeyboardButton(loc.get("menu_help"), callback_data="6"),
-    ],
-    [
-        InlineKeyboardButton(loc.get("menu_withdraw"), callback_data="withdraw")
+
+def create_start_menu():
+    user_menu_kb = [
+        [
+            InlineKeyboardButton(loc.get("menu_referral_link"), callback_data="1"),
+            InlineKeyboardButton(loc.get("menu_referral_status"), callback_data="2"),
+        ],
+        [
+            InlineKeyboardButton(loc.get("menu_leaderboard"), callback_data="3"),
+            InlineKeyboardButton(loc.get("menu_rewards"), callback_data="4"),
+        ],
+        [
+            InlineKeyboardButton(loc.get("menu_connect"), callback_data="5"),
+            InlineKeyboardButton(loc.get("menu_help"), callback_data="6"),
+        ],
+        [
+            InlineKeyboardButton(loc.get("menu_withdraw"), callback_data="withdraw")
+        ]
     ]
-]
 
-if user_cfg['Telegram']['ads_contact']:
-    user_menu_kb.append([InlineKeyboardButton(loc.get('menu_ads'), url=user_cfg['Telegram']['ads_contact'])])
+    if user_cfg['Telegram']['ads_contact']:
+        user_menu_kb.append([InlineKeyboardButton(variables.ad_button_name, url=variables.ad_button_url)])
 
-user_menu_rm = InlineKeyboardMarkup(user_menu_kb)
+    return InlineKeyboardMarkup(user_menu_kb)
+
 
 cancel_kb = [[
     InlineKeyboardButton(loc.get("menu_cancel"), callback_data="cancel"),
@@ -229,7 +232,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
             return
 
     await update.message.reply_text(text=loc.get("conversation_open_user_menu"),
-                                    reply_markup=user_menu_rm,
+                                    reply_markup=create_start_menu(),
                                     parse_mode='HTML')
 
 
@@ -319,7 +322,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return await leader_board(update, context)
 
     await query.answer(notification, show_alert=show_alert)
-    await query.message.reply_text(text=text, reply_markup=user_menu_rm, parse_mode='HTML')
+    await query.message.reply_text(text=text, reply_markup=create_start_menu(), parse_mode='HTML')
     await query.delete_message()
 
 
@@ -347,7 +350,7 @@ async def leader_board(update: Update, context: ContextTypes.DEFAULT_TYPE):
         notification = "Cancelling operation"
         text = loc.get("conversation_open_user_menu")
         await query.answer(notification)
-        await query.message.reply_text(text=text, reply_markup=user_menu_rm, parse_mode='HTML')
+        await query.message.reply_text(text=text, reply_markup=create_start_menu(), parse_mode='HTML')
         await query.delete_message()
         return ConversationHandler.END
     else:
@@ -601,7 +604,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     notification = "Cancelling operation"
     text = loc.get("conversation_open_user_menu")
     await query.answer(notification)
-    await query.message.reply_text(text=text, reply_markup=user_menu_rm, parse_mode='HTML')
+    await query.message.reply_text(text=text, reply_markup=create_start_menu(), parse_mode='HTML')
     await query.delete_message()
 
     return ConversationHandler.END
