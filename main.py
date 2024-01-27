@@ -381,7 +381,7 @@ async def leader_board_detail(update: Update, context: ContextTypes.DEFAULT_TYPE
     reply_markup = None
     if user_cfg['Telegram']['ads_contact']:
         reply_markup = InlineKeyboardMarkup(
-            [[InlineKeyboardButton(loc.get('menu_ads'), url=user_cfg['Telegram']['ads_contact'])]]
+            [[InlineKeyboardButton(variables.ad_button_name, url=variables.ad_button_url)]]
         )
     await update.message.reply_text(text=text, reply_markup=reply_markup, parse_mode='HTML')
 
@@ -715,7 +715,7 @@ async def get_stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = None
     if user_cfg['Telegram']['ads_contact']:
         reply_markup = InlineKeyboardMarkup(
-            [[InlineKeyboardButton(loc.get('menu_ads'), url=user_cfg['Telegram']['ads_contact'])]]
+            [[InlineKeyboardButton(variables.ad_button_name, url=variables.ad_button_url)]]
         )
 
     await update.message.reply_text(text, reply_markup=reply_markup, parse_mode='HTML')
@@ -781,6 +781,8 @@ def main() -> None:
     application.add_handler(CommandHandler(admin_commands.SET_MIN_REFERRAL, admin_set))
     application.add_handler(CommandHandler(admin_commands.ENABLE_WITHDRAW, admin_set))
     application.add_handler(CommandHandler(admin_commands.DISABLE_WITHDRAW, admin_set))
+    application.add_handler(CommandHandler(admin_commands.SET_AD_NAME, admin_set))
+    application.add_handler(CommandHandler(admin_commands.SET_AD_URL, admin_set))
 
     application.add_handler(ChatJoinRequestHandler(chat_join_request))
     application.add_error_handler(error_handler)

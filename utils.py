@@ -42,6 +42,8 @@ class AdminCommands:
     DISABLE_WITHDRAW = 'disable_withdraw'
     SET_MIN_REFERRAL = 'set_min_referral'
     SET_MIN_REWARD = 'set_min_reward'
+    SET_AD_NAME = 'set_ad_name'
+    SET_AD_URL = 'set_ad_url'
 
     def __init__(self):
         self.commands = [
@@ -50,7 +52,9 @@ class AdminCommands:
             Command(AdminCommands.ENABLE_WITHDRAW, "Enable withdraw for users", None),
             Command(AdminCommands.DISABLE_WITHDRAW, "Disable withdraw for users", None),
             Command(AdminCommands.SET_MIN_REFERRAL, "Set minimum referrals required for withdraw", int),
-            Command(AdminCommands.SET_MIN_REWARD, "Set minimum reward required for withdraw", float)
+            Command(AdminCommands.SET_MIN_REWARD, "Set minimum reward required for withdraw", float),
+            Command(AdminCommands.SET_AD_NAME, "Set ad button name", str),
+            Command(AdminCommands.SET_AD_URL, "Set ad button URL", str)
         ]
 
     def __str__(self):
@@ -73,6 +77,8 @@ class Vars:
         self.withdraw_enabled: bool = False
         self.min_referral: int = 0
         self.min_reward_amount: float = 0
+        self.ad_button_name: str = "🗞 Advertise Your Project Here"
+        self.ad_button_url: str = "https://t.me/+EA5ZPGTwt1AxNzQ1"
 
     def __str__(self):
         text = ""
@@ -99,3 +105,7 @@ class Vars:
             self.min_referral = value
         elif cmd == AdminCommands.SET_MIN_REWARD:
             self.min_reward_amount = value
+        elif cmd == AdminCommands.SET_AD_NAME:
+            self.ad_button_name = value
+        elif cmd == AdminCommands.SET_AD_URL:
+            self.ad_button_url = value
