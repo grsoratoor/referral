@@ -496,8 +496,6 @@ async def admin_set(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Admin command to set claimed amount equal to reward amount for all users
 @admin_only
 async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    input_text = update.message.text.split(' ')
-
     message = await update.message.reply_text("Generating csv file ...")
 
     # Get users from the database
@@ -532,11 +530,12 @@ async def ask_broadcast_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return BROADCAST
 
 
-@admin_only
 async def send_broadcast_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Broadcast started")
     session = sqlalchemy.orm.sessionmaker(engine)()
     users = session.query(db.User).all()
+    session.close()
+
     for user in users:
         try:
             await update.message.copy(chat_id=user.user_id)
@@ -545,9 +544,12 @@ async def send_broadcast_msg(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
         await asyncio.sleep(0.5)
 
-    session.close()
-
     await update.message.reply_text("Broadcast completed!")
+
+
+@admin_only
+async def start_broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.application.create_task(send_broadcast_msg(update, context), update)
 
 
 # Function to start the verification process
@@ -754,7 +756,7 @@ def main() -> None:
     broadcast_handler = ConversationHandler(
         entry_points=[CommandHandler('broadcast', ask_broadcast_msg)],
         states={
-            BROADCAST: [MessageHandler(~filters.COMMAND, send_broadcast_msg),
+            BROADCAST: [MessageHandler(~filters.COMMAND, start_broadcast),
                         CommandHandler('cancel', cancel)],
         },
         fallbacks=[],
