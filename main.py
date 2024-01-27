@@ -543,7 +543,7 @@ async def send_broadcast_msg(update: Update, context: ContextTypes.DEFAULT_TYPE)
         except telegram.error.BadRequest as e:
             logger.error(e)
 
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.1)
 
     await update.message.reply_text("Broadcast completed!")
 
