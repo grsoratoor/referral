@@ -454,6 +454,7 @@ def admin_only(func):
 async def admin_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = f"<b>Admin Help Menu</b>\n\n" \
            f"{admin_commands}\n\n" \
+           f"/broadcast - Broadcast message to users\n\n" \
            f"/download - Download all user data\n\n" \
            f"<b>Current Configuration</b>\n\n" \
            f"{variables}"
