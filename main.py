@@ -513,14 +513,13 @@ async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Populate the CSV file with user data
     for user in users:
         csv_writer.writerow([user.user_id, user.full_name, user.wallet, user.reward, user.claimed, user.balance])
-
     csv_output.seek(0)
 
     # delete loading message
     await message.delete()
     # Send the original CSV file to the user as a document
     await update.message.reply_document(
-        document=csv_output,
+        document=csv_output.getvalue().encode(),
         filename="user_data.csv",
         caption="User data."
     )
