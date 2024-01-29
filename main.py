@@ -9,7 +9,6 @@ from io import StringIO
 
 import sqlalchemy
 import sqlalchemy.ext.declarative as sed
-import telegram
 from captcha.image import ImageCaptcha
 from sqlalchemy import func
 from sqlalchemy.orm import joinedload
@@ -539,14 +538,16 @@ async def send_broadcast_msg(update: Update, context: ContextTypes.DEFAULT_TYPE)
     session = sqlalchemy.orm.sessionmaker(engine)()
     users = session.query(db.User).all()
     session.close()
-
+    count = 1
     for user in users:
         try:
             await update.message.copy(chat_id=user.user_id)
-        except telegram.error.BadRequest as e:
-            logger.error(e)
-
-        await asyncio.sleep(0.1)
+            if count % 100 == 0:
+                await update.message.reply_text(f"Sent to {count} users")
+        except Exception as e:
+            pass
+        count += 1
+        await asyncio.sleep(0.01)
 
     await update.message.reply_text("Broadcast completed!")
 
@@ -641,7 +642,7 @@ async def chat_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         message = await context.bot.send_message(chat_id=user.user_id,
                                                  text=loc.get("conversation_open_user_menu"),
-                                                 reply_markup=user_menu_rm,
+                                                 reply_markup=create_start_menu(),
                                                  parse_mode='HTML')
         await context.bot.send_message(chat_id=user_cfg['Telegram']['group_id'],
                                        text=f"{user.mention()} was referred by {user.referred_by.mention()}",
@@ -655,7 +656,7 @@ async def chat_join_request(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_wallet_address(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cache.update_user(update.effective_user.id, {'wallet': update.message.text})
     await update.message.reply_text("Thank you, Your wallet address saved. This will be used to send rewards.")
-    await update.message.reply_text(text=loc.get("conversation_open_user_menu"), reply_markup=user_menu_rm,
+    await update.message.reply_text(text=loc.get("conversation_open_user_menu"), reply_markup=create_start_menu(),
                                     parse_mode='HTML')
     return ConversationHandler.END
 
